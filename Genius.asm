@@ -21,13 +21,24 @@ yellow_y0:  		.word 12
 yellow_x:   		.word 63
 yellow_y:   		.word 52
 
+sequencia_vetor:	.space 400	# vetor para 100 palavras
+
+# Mensagem do menu
+mensagem_inicial:	.asciiz "\tGenius\n"
+n_repeticoes:		.asciiz "Insira o número de repetições: "
+dificuldade:		.asciiz "\nDificuldade\n"
+facil:			.asciiz "1. Fácil\n"
+medio:			.asciiz "2. Médio\n"
+dificil:		.asciiz "3. Difícil\n"
+inicio:			.asciiz "1. Iniciar jogo\n"
+fim:			.asciiz "2. Encerrar o programa\n "
 
 .text
 .globl main
 ## --------------- FUNÇÃO MAIN ------------------------------- ##
 main:
-  jal     init_display         # jump to init_display and save position to $ra
-  
+  jal   init_display         # jump to init_display and save position to $ra
+  jal	menu
   li	$v0, 10
   syscall
 init_display:
@@ -45,10 +56,88 @@ init_display:
   jr	$ra                   # jump to $ra
 ## --------------- FIM FUNÇÃO MAIN ------------------------------- ##
 
+
 ## --------------- FUNÇÃO DO MENU ------------------------------- ##
+menu:
+# -- Menu Principal -- 	
+  li 	$v0, 4          
+  la 	$a0, mensagem_inicial 
+  syscall
+  
+  li 	$v0, 4          
+  la 	$a0, inicio 
+  syscall
+  li 	$v0, 4          
+  la 	$a0, fim
+  syscall
+  li 	$v0, 5
+  syscall
+  move	$t2, $v0
+
+  beq	$t2, 2, end_game
+  
+  # Numero de repetições
+  li 	$v0, 4          
+  la 	$a0, n_repeticoes 
+  syscall
+  li 	$v0, 5
+  syscall
+  move	$t0, $v0
+  
+  # Dificuldade	
+  li 	$v0, 4          
+  la 	$a0, dificuldade 
+  syscall
+  li 	$v0, 4          
+  la 	$a0, facil 
+  syscall
+  li 	$v0, 4          
+  la 	$a0, medio 
+  syscall
+  li 	$v0, 4          
+  la 	$a0, dificil 
+  syscall
+  li 	$v0, 5
+  syscall
+  move 	$t1, $v0
+
+  move  $a0, $t0
+  move  $a1, $t1
+  jal   game
+end_game:
+  jr     $ra
 ## --------------- FIM DA FUNÇÃO MENU ------------------------------- ##
 
 ## --------------- FUNÇÃO PRINCIPAL DO JOGO ----------------------------- ##
+game:
+  # a0 -> Numero de repetições
+  # a1 -> Dificuldade
+  addiu  $sp, $sp, -24
+  sw     $a0, 0($sp)     
+  sw     $a1, 4($sp)    
+  sw     $ra, 16($s1)    
+ # sorteira Numero
+  jal    sequencia        	# jump to sequencia and save position to $ra
+  move   $a0, $v0    		# $a0 = numero sorteado 
+  # toca Numero
+  # entrada do usuario
+  # comparação
+ game_loop_end:
+  lw    $a0, 0($sp)     
+  lw    $a1, 4($sp)     
+  lw    $ra, 16($sp)    
+  
+  addiu $sp, $sp, 24
+  jr    $ra          
+  
+## -- Função que gera um número aleatório
+sequencia:
+  # Soerteia Número  de 0-3
+  li	$a1, 3		# Numero maximo
+  li	$v0, 42		# Numero aleatorio
+  syscall
+  move	$v0, $a0	# Transfere numero aleatorio para return
+  jr	$ra
 ## --------------- FIM FUNÇÃO PRINCIPAL DO JOGO ----------------------------- ##
 
 draw_rectangle:
