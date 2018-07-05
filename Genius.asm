@@ -23,6 +23,7 @@ green_x:   		 .word 23
 green_y:   		 .word 5
 
 sequencia_vetor:	 .space 256
+sequencia_jogador:	 .space 256
 
 # Mensagem do menu
 mensagem_inicial:	.asciiz "\tGenius\n"
@@ -33,8 +34,8 @@ medio:			.asciiz "2. Madio\n"
 dificil:		.asciiz "3. Dificil\n"
 inicio:			.asciiz "1. Iniciar jogo\n"
 fim:			.asciiz "2. Encerrar o programa\n "
-
-
+gameover:		.asciiz "\t\tGAME OVER!\n"
+gamewin:		.asciiz "\t\tGAME WIN!\n"
 
 .text
 main:
@@ -86,9 +87,64 @@ main:
   	move  $a1, $t1
   	# a0 -> n_repeticoes
   	# a1 -> dificuldade
-  	jal   jogo
-	end_game:	
-
+  	jal   jogo	
+	
+	beq	$v0, 1, win
+	beq	$v0, 0, lose
+	win:
+	li 	$v0, 4          
+  	la 	$a0, gamewin 
+  	syscall
+	
+	li  	$v0, 33          # 
+   	addi 	$a0, $zero, 61	# = pitch (0-127) 
+	addi	$a1, $zero, 500	# = duration in milliseconds 
+	addi	$a2, $zero, 5	# = instrument (0-127) 
+	addi	$a3, $zero, 100	# = volume (0-127)
+	syscall
+	
+	li  	$v0, 33          # 
+   	addi 	$a0, $zero, 62	# = pitch (0-127) 
+	addi	$a1, $zero, 500	# = duration in milliseconds 
+	addi	$a2, $zero, 5	# = instrument (0-127) 
+	addi	$a3, $zero, 100	# = volume (0-127)
+	syscall
+	
+	li  	$v0, 33          # 
+   	addi 	$a0, $zero, 64	# = pitch (0-127) 
+	addi	$a1, $zero, 500	# = duration in milliseconds 
+	addi	$a2, $zero, 5	# = instrument (0-127) 
+	addi	$a3, $zero, 100	# = volume (0-127)
+  	syscall
+	j	end_game
+	
+	lose:
+	li 	$v0, 4          
+  	la 	$a0, gameover
+  	syscall
+  	
+  	li  	$v0, 33          # 
+   	addi 	$a0, $zero, 64	# = pitch (0-127) 
+	addi	$a1, $zero, 1000	# = duration in milliseconds 
+	addi	$a2, $zero, 24	# = instrument (0-127) 
+	addi	$a3, $zero, 100	# = volume (0-127)
+	syscall
+	
+	li  	$v0, 33          # 
+   	addi 	$a0, $zero, 612	# = pitch (0-127) 
+	addi	$a1, $zero, 1000	# = duration in milliseconds 
+	addi	$a2, $zero, 24	# = instrument (0-127) 
+	addi	$a3, $zero, 100	# = volume (0-127)
+	syscall
+	
+	li  	$v0, 33          # 
+   	addi 	$a0, $zero, 61	# = pitch (0-127) 
+	addi	$a1, $zero, 1000	# = duration in milliseconds 
+	addi	$a2, $zero, 24	# = instrument (0-127) 
+	addi	$a3, $zero, 100	# = volume (0-127)
+  	syscall
+  	
+	end_game:
 	li	$v0, 10
 	syscall
 init:
@@ -109,41 +165,45 @@ init:
 jogo:
 	addiu	$sp, $sp, -32
 	sw	$a0, 0($sp)
+	sw	$a0, 4($sp)
 	sw	$ra, 16($sp)
 	sw	$s0, 20($sp)
 	sw	$s1, 24($sp)
 	sw	$s2, 28($sp)
-	
+	sw	$s3, 32($sp)
 	move	$s0, $a0		# $a0 = numero de repetições
 	li	$s1, 0
 	la	$s2, sequencia_vetor
 	jogo_loop:
-		bgt	$s1, $s0, jogo_loop_fim
+		beq	$s1, $s0, jogo_loop_fim
 		jal	num
 		
 		sll	$t0, $s1, 2
 		add	$t0, $t0, $s2
 		sw	$v0, 0($t0)
-		#tom		
+				
 		move	$a0, $s1
 		jal	toca_seq
 		
-		li	$v0, 32
-		addi	$a0, $zero, 2000
-		syscall
+		move	$a0, $s1
+		#jal	jogador
+		#move	$s3, $v0
+		#beqz	$s3, jogo_loop_fim
 		
 		addi	$s1, $s1, 1
-		#addi	$s2, $s2, 4
+		
 	j	jogo_loop
 jogo_loop_fim:
 	lw	$a0, 0($sp)
+	lw	$a1, 4($sp)
 	lw	$ra, 16($sp)
 	lw	$s0, 20($sp)
 	lw	$s1, 24($sp)
 	lw	$s2, 28($sp)
+	lw	$s3, 32($sp)
 	addiu	$sp, $sp, 32
 	jr	$ra
-	
+
 num:
 	addiu	$sp,$sp,-16
 	sw	$a0, 0($sp)
@@ -161,19 +221,21 @@ num:
   	addiu	$sp,$sp, 16
 	jr	$ra
 toca_seq:
-# $a0 -> tamanho vetor
+# $a0 -> tamanho vetor		$a1->dificuldade
 	addiu	$sp,$sp, -32
 	sw	$a0, 0($sp)
+	sw	$a1, 4($sp)
 	sw	$ra, 16($sp)
 	sw	$s0, 20($sp)
 	sw	$s1, 24($sp)
 	sw	$s2, 28($sp)
 	sw	$s3, 32($sp)
+	
 	move	$s0, $a0			# $s0 = numero de elementos inseridos no vetor
 	li	$s1, 0
 	la	$s2, sequencia_vetor
 	toca_seq_loop:
-		bge	$s1, $s0, toca_seq_loop_fim
+		bgt	$s1, $s0, toca_seq_loop_fim
 		#$s3 = sequencia_vetor[i]
 		sll	$s3, $s1, 2
 		add	$s3, $s3, $s2
@@ -181,15 +243,15 @@ toca_seq:
 		
 		move	$a0, $s3	# $a0 = $s3
 		jal	draw_rectangle
-		#jal	tom
-		addi	$s3, $s3, 4
-		move	$a0, $s3
+		jal	tom
+		addi	$a0, $s3, 4
 		jal	draw_rectangle
 		addi	$s1, $s1, 1	# i++
 		#addi	$s2, $s2, 4	# ++sequencia_vetor
 	j	toca_seq_loop
 toca_seq_loop_fim:
 	lw	$a0, 0($sp)
+	lw	$a1, 4($sp)
 	lw	$ra, 16($sp)
 	lw	$s0, 20($sp)
 	lw	$s1, 24($sp)
@@ -197,6 +259,7 @@ toca_seq_loop_fim:
 	lw	$s3, 32($sp)
 	addiu	$sp, $sp,32
 	jr	$ra
+
 tom:	
 	beq	$a0, 0, tom_verde
 	beq	$a0, 1, tom_vermelho
@@ -204,44 +267,62 @@ tom:
 	beq	$a0, 3, tom_amarelo
 	
 	tom_verde:
-	li  	$v0, 31           # 
-   	addi 	$a0, $zero, 72	# = pitch (0-127) 
-	addi	$a1, $zero, 500	# = duration in milliseconds 
-	addi	$a2, $zero, 5	# = instrument (0-127) 
+	li  	$v0, 31          # 
+   	addi 	$a0, $zero, 61	# = pitch (0-127) 
+	addi	$a1, $zero, 1000	# = duration in milliseconds 
+	addi	$a2, $zero, 24	# = instrument (0-127) 
 	addi	$a3, $zero, 100	# = volume (0-127)
     	syscall
 	j	tom_next
 	tom_vermelho:
 	li  	$v0, 31           
    	addi 	$a0, $zero, 62	# = pitch (0-127) 
-	addi	$a1, $zero, 500	# = duration in milliseconds 
-	addi	$a2, $zero, 5	# = instrument (0-127) 
-	addi	$a3, $zero, 90	# = volume (0-127)
-    	syscall
+	addi	$a1, $zero, 1000	# = duration in milliseconds 
+	addi	$a2, $zero, 24	# = instrument (0-127) 
+	addi	$a3, $zero, 100	# = volume (0-127)
+	syscall
 	j	tom_next
 	tom_azul:
-	li  	$v0, 31           # service 1 is print integer
+	li  	$v0, 31           
    	addi 	$a0, $zero, 64	# = pitch (0-127) 
-	addi	$a1, $zero, 500	# = duration in milliseconds 
-	addi	$a2, $zero, 7	# = instrument (0-127) 
+	addi	$a1, $zero, 1000	# = duration in milliseconds 
+	addi	$a2, $zero, 24	# = instrument (0-127) 
 	addi	$a3, $zero, 100	# = volume (0-127)
-    	syscall
+	syscall
 	j	tom_next
 	tom_amarelo:
-	li  	$v0, 31           # service 1 is print integer
+	li  	$v0, 31           
    	addi 	$a0, $zero, 65	# = pitch (0-127) 
-	addi	$a1, $zero, 500	# = duration in milliseconds 
-	addi	$a2, $zero, 7	# = instrument (0-127) 
+	addi	$a1, $zero, 1000	# = duration in milliseconds 
+	addi	$a2, $zero, 24	# = instrument (0-127) 
 	addi	$a3, $zero, 100	# = volume (0-127)
-    	syscall
+	syscall
 	j	tom_next
 	
 	tom_next:
+	
+	beq	$a1, 1, _facil 
+	beq	$a1, 2, _medio
+	beq	$a1, 3, _dificil
+	_facil:
 	li	$v0, 32
 	addi	$a0, $zero, 500
 	syscall
+	j	fim_tom
+	_medio:
+	li	$v0, 32
+	addi	$a0, $zero, 300
+	syscall
+	j	fim_tom
+	_dificil:
+	li	$v0, 32
+	addi	$a0, $zero, 100
+	syscall
+	j	fim_tom
+	fim_tom:
 	
 	jr	$ra
+
 draw_rectangle:
 	addiu	$sp,$sp, -48
 	sw	$a0, 0($sp)
@@ -377,5 +458,3 @@ draw_rectangle:
   	add   $t5, $t0, $t4			              # Soma o end. de memo principal com o xy
   	sw    $t3, 0($t5)			                # Salva a cor em memo xy
   	jr    $ra               
-
-
